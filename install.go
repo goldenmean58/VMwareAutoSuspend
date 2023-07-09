@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"unsafe"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
 )
@@ -60,6 +62,16 @@ func installService() error {
 		return err
 	}
 	defer s.Close()
+
+	// https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_preshutdown_info
+	var servicePreshutdownInfo struct {
+		dwPreshutdownTimeout uint32
+	}
+	servicePreshutdownInfo.dwPreshutdownTimeout = 1000 * 60 * 3 // 3 minutes
+	if err := windows.ChangeServiceConfig2(s.Handle, windows.SERVICE_CONFIG_PRESHUTDOWN_INFO, (*byte)(unsafe.Pointer(&servicePreshutdownInfo))); err != nil {
+		return fmt.Errorf("ChangeServiceConfig2() SERVICE_CONFIG_PRESHUTDOWN_INFO failed: %w", err)
+	}
+
 	err = eventlog.InstallAsEventCreate(svcName, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
