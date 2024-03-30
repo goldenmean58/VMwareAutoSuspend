@@ -1,8 +1,8 @@
 name: "go: build dev binaries"
 
 on:
-  push:
-    branches: [ master ]
+  release:
+    types: [created]
 permissions:
     contents: write
     packages: write
